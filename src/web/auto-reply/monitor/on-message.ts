@@ -1,3 +1,4 @@
+import { isIngestOnlyMode } from "../../../auto-reply/ingest-only.js";
 import type { getReplyFromConfig } from "../../../auto-reply/reply.js";
 import type { MsgContext } from "../../../auto-reply/templating.js";
 import { loadConfig } from "../../../config/config.js";
@@ -5,6 +6,7 @@ import { logVerbose } from "../../../globals.js";
 import { resolveAgentRoute } from "../../../routing/resolve-route.js";
 import { buildGroupHistoryKey } from "../../../routing/session-key.js";
 import { normalizeE164 } from "../../../utils.js";
+import { appendIngestLog } from "../ingest-log.js";
 import type { MentionConfig } from "../mentions.js";
 import type { WebInboundMsg } from "../types.js";
 import { maybeBroadcastMessage } from "./broadcast.js";
@@ -93,6 +95,29 @@ export function createWebOnMessageHandler(params: {
       logVerbose("Skipping auto-reply: detected echo (message matches recently sent text)");
       params.echoTracker.forget(msg.body);
       return;
+    }
+
+    // Ingest-only: log ALL inbound messages before group gating filters them
+    if (isIngestOnlyMode()) {
+      appendIngestLog({
+        receivedAt: new Date().toISOString(),
+        messageId: msg.id,
+        sessionKey: route.sessionKey,
+        accountId: route.accountId,
+        channel: "whatsapp",
+        chatType: msg.chatType,
+        from: msg.from,
+        to: msg.to,
+        senderId: msg.senderJid?.trim() || msg.senderE164,
+        senderName: msg.senderName,
+        senderE164: msg.senderE164,
+        rawBody: msg.body,
+        body: msg.body,
+        mediaType: msg.mediaType,
+        correlationId: undefined,
+        originatingChannel: "whatsapp",
+        originatingTo: conversationId,
+      });
     }
 
     if (msg.chatType === "group") {

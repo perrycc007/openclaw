@@ -33,7 +33,7 @@ start: ## Start the gateway in the background
 	@pnpm build
 	@echo "Starting OpenClaw gateway on port $(GATEWAY_PORT)..."
 	@nohup pnpm openclaw gateway run --port $(GATEWAY_PORT) --force > /tmp/openclaw-gateway.log 2>&1 &
-	@sleep 5
+	@sleep 20
 	@"$(MAKE)" --no-print-directory status
 
 stop: ## Stop the running gateway
@@ -62,7 +62,8 @@ logs: ## Tail the gateway log
 # --- Testing ---
 
 test-msg: ## Send a test message to +85296374978 via WhatsApp
-	@pnpm openclaw message send --channel whatsapp --target +85296374978 --message "Hello from OpenClaw"
+	@pnpm openclaw gateway call send \
+		--params '{"to":"+85296374978","message":"Hello from OpenClaw","channel":"whatsapp","idempotencyKey":"test-'"$$(date +%s)"'"}'
 
 # --- WhatsApp ---
 
