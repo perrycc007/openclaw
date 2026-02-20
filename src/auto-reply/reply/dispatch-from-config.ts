@@ -1,3 +1,4 @@
+import { isIngestOnlyMode } from "../ingest-only.js";
 import { resolveSessionAgentId } from "../../agents/agent-scope.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import { loadSessionStore, resolveStorePath } from "../../config/sessions.js";
@@ -87,6 +88,11 @@ export async function dispatchReplyFromConfig(params: {
   replyOptions?: Omit<GetReplyOptions, "onToolResult" | "onBlockReply">;
   replyResolver?: typeof getReplyFromConfig;
 }): Promise<DispatchFromConfigResult> {
+  if (isIngestOnlyMode()) {
+    logVerbose("ingest-only: skipped dispatchReplyFromConfig");
+    return { queuedFinal: false, counts: params.dispatcher.getQueuedCounts() };
+  }
+
   const { ctx, cfg, dispatcher } = params;
   const diagnosticsEnabled = isDiagnosticsEnabled(cfg);
   const channel = String(ctx.Surface ?? ctx.Provider ?? "unknown").toLowerCase();

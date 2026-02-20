@@ -1,3 +1,4 @@
+import { isIngestOnlyMode } from "../../auto-reply/ingest-only.js";
 import { appendCronStyleCurrentTimeLine } from "../../agents/current-time.js";
 import { resolveHeartbeatReplyPayload } from "../../auto-reply/heartbeat-reply-payload.js";
 import {
@@ -154,6 +155,17 @@ export async function runWebHeartbeatOnce(opts: {
         status: "skipped",
         to,
         reason: "alerts-disabled",
+        channel: "whatsapp",
+      });
+      return;
+    }
+
+    if (isIngestOnlyMode()) {
+      heartbeatLogger.info({ to, reason: "ingest-only" }, "heartbeat skipped (ingest-only mode)");
+      emitHeartbeatEvent({
+        status: "skipped",
+        to,
+        reason: "ingest-only",
         channel: "whatsapp",
       });
       return;

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isIngestOnlyMode } from "../../auto-reply/ingest-only.js";
 import { listAgentIds } from "../../agents/agent-scope.js";
 import { BARE_SESSION_RESET_PROMPT } from "../../auto-reply/reply/session-reset-prompt.js";
 import { agentCommand } from "../../commands/agent.js";
@@ -161,6 +162,14 @@ export const agentHandlers: GatewayRequestHandlers = {
           ErrorCodes.INVALID_REQUEST,
           `invalid agent params: ${formatValidationErrors(validateAgentParams.errors)}`,
         ),
+      );
+      return;
+    }
+    if (isIngestOnlyMode()) {
+      respond(
+        false,
+        undefined,
+        errorShape(ErrorCodes.INVALID_REQUEST, "agent blocked: ingest-only mode is active"),
       );
       return;
     }

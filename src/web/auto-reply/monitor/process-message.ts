@@ -1,3 +1,4 @@
+import { isIngestOnlyMode } from "../../../auto-reply/ingest-only.js";
 import { resolveIdentityNamePrefix } from "../../../agents/identity.js";
 import { resolveChunkMode, resolveTextChunkLimit } from "../../../auto-reply/chunk.js";
 import { shouldComputeCommandAuthorized } from "../../../auto-reply/command-detection.js";
@@ -33,6 +34,7 @@ import { formatError } from "../../session.js";
 import { deliverWebReply } from "../deliver-reply.js";
 import { whatsappInboundLog, whatsappOutboundLog } from "../loggers.js";
 import type { WebInboundMsg } from "../types.js";
+import { appendIngestLog } from "../ingest-log.js";
 import { elide } from "../util.js";
 import { maybeSendAckReaction } from "./ack-reaction.js";
 import { formatGroupMembers } from "./group-members.js";
@@ -350,6 +352,33 @@ export async function processMessage(params: {
     );
   });
   trackBackgroundTask(params.backgroundTasks, metaTask);
+
+  if (isIngestOnlyMode()) {
+    appendIngestLog({
+      receivedAt: new Date().toISOString(),
+      messageId: ctxPayload.MessageSid,
+      sessionKey: ctxPayload.SessionKey,
+      accountId: ctxPayload.AccountId,
+      channel: "whatsapp",
+      chatType: ctxPayload.ChatType,
+      from: ctxPayload.From,
+      to: ctxPayload.To,
+      senderId: ctxPayload.SenderId,
+      senderName: ctxPayload.SenderName,
+      senderE164: ctxPayload.SenderE164,
+      rawBody: params.msg.body,
+      body: combinedBody,
+      mediaType: ctxPayload.MediaType as string | undefined,
+      correlationId,
+      originatingChannel: ctxPayload.OriginatingChannel,
+      originatingTo: ctxPayload.OriginatingTo,
+    });
+    if (shouldClearGroupHistory) {
+      params.groupHistories.set(params.groupHistoryKey, []);
+    }
+    logVerbose("ingest-only: skipped auto-reply dispatch");
+    return false;
+  }
 
   const { queuedFinal } = await dispatchReplyWithBufferedBlockDispatcher({
     ctx: ctxPayload,

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { CURRENT_SESSION_VERSION, SessionManager } from "@mariozechner/pi-coding-agent";
+import { isIngestOnlyMode } from "../../auto-reply/ingest-only.js";
 import { resolveSessionAgentId } from "../../agents/agent-scope.js";
 import { resolveThinkingDefault } from "../../agents/model-selection.js";
 import { resolveAgentTimeoutMs } from "../../agents/timeout.js";
@@ -814,6 +815,15 @@ export const chatHandlers: GatewayRequestHandlers = {
         cached: true,
         runId: clientRunId,
       });
+      return;
+    }
+
+    if (isIngestOnlyMode()) {
+      respond(
+        false,
+        undefined,
+        errorShape(ErrorCodes.INVALID_REQUEST, "chat.send blocked: ingest-only mode is active"),
+      );
       return;
     }
 
